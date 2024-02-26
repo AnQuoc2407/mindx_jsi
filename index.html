@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COVID-19 Stats</title>
+</head>
+<body>
+  <h1>COVID-19 Stats</h1>
+  <div id="stats">
+    <h2>Total Cases: <span id="totalCases"></span></h2>
+    <h2>Total Deaths: <span id="totalDeaths"></span></h2>
+    <h2>New Cases Per Day: <span id="newCasesPerDay"></span></h2>
+  </div>
+  <input type="text" id="locationInput" placeholder="Enter location name">
+  <button onclick="searchLocation()">Search</button>
+  <!-- <div id="locationInfo"></div> -->
+
+  <div id="filterContainer">
+    <input type="number" id="minDeathInput" placeholder="Enter minimum death number">
+    <input type="number" id="maxDeathInput" placeholder="Enter maximum death number">
+    <button onclick="filterLocations()">Filter Locations</button>
+  </div>
+  <div id="locationInfo"></div>
+
+  <script>
+    async function fetchData() {
+      try {
+        const response = await fetch('https://api.apify.com/v2/key-value-stores/EaCBL1JNntjR3EakU/records/LATEST?disableRedirect=true');
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    }
+
+    function calculateStats(data) {
+      const totalCases = data.infected;
+      const totalDeaths = data.died;
+      const newCasesToday = data.infectedToday;
+      return { totalCases, totalDeaths, newCasesToday };
+    }
+
+    async function filterLocations() {
+      const minDeath = parseInt(document.getElementById('minDeathInput').value.trim());
+      const maxDeath = parseInt(document.getElementById('maxDeathInput').value.trim());
+      const data = await fetchData();
+      const filteredLocations = data.locations.filter(loc => loc.death >= minDeath && loc.death <= maxDeath);
+      if (filteredLocations.length > 0) {
+        const locationInfo = filteredLocations.map(loc => `
+          <h2>${loc.name}</h2>
+          <p>Total Cases: ${loc.cases}</p>
+          <p>Total Deaths: ${loc.death}</p>
+          <p>Cases Today: ${loc.casesToday}</p>
+        `).join('');
+        document.getElementById('locationInfo').innerHTML = locationInfo;
+      } else {
+        document.getElementById('locationInfo').innerHTML = "<p>No locations found within the specified range</p>";
+      }
+    }
+
+    // async function searchLocation() {
+    //   const locationName = document.getElementById('locationInput').value.trim().toLowerCase();
+    //   const data = await fetchData();
+    //   const location = data.locations.find(loc => loc.name.toLowerCase() === locationName);
+    //   if (location) {
+    //     document.getElementById('locationInfo').innerHTML = `
+    //       <h2>${location.name}</h2>
+    //       <p>Total Cases: ${location.cases}</p>
+    //       <p>Total Deaths: ${location.death}</p>
+    //       <p>Cases Today: ${location.casesToday}</p>
+    //     `;
+    //   } else {
+    //     document.getElementById('locationInfo').innerHTML = "<p>Location not found</p>";
+    //   }
+    // }
+
+    window.onload = async function() {
+      const data = await fetchData();
+      const { totalCases, totalDeaths, newCasesToday } = calculateStats(data);
+      document.getElementById('totalCases').textContent = totalCases.toLocaleString();
+      document.getElementById('totalDeaths').textContent = totalDeaths.toLocaleString();
+      document.getElementById('newCasesPerDay').textContent = newCasesToday.toLocaleString();
+    }
+  </script>
+</body>
+</html>
